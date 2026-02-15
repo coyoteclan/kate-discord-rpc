@@ -23,10 +23,20 @@ jobs:
       - name: Install KDE Craft
         shell: powershell
         run: |
-          Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-          Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/KDE/craft/master/setup/install_craft.ps1' -OutFile 'install_craft.ps1'
-          .\install_craft.ps1 -useDefaults -root C:\CraftRoot
-          echo "C:\CraftRoot\bin" >> $env:GITHUB_PATH
+          # 1. Install certifi to prevent SSL issues on Windows [4]
+          python -m pip install certifi
+          
+          # 2. Setup folders and download the bootstrap script
+          $root = "C:\CraftRoot"
+          New-Item -ItemType Directory -Path "$root\download" -Force
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/KDE/craft/master/setup/CraftBootstrap.py" -OutFile "$root\download\CraftBootstrap.py"
+          
+          # 3. Run Python bootstrap directly. 
+          # We pipe an empty string to satisfy any remaining Read-Host/input() prompts 
+          "" | python "$root\download\CraftBootstrap.py" --prefix $root --use-defaults
+          
+          # 4. Add Craft binary path to the GitHub Path
+          echo "$root\bin" >> $env:GITHUB_PATH
 
       - name: Install Dependencies via Craft
         shell: powershell
