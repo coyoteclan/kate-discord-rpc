@@ -23,8 +23,9 @@ jobs:
       - name: Install KDE Craft
         shell: powershell
         run: |
-          # Download and install Craft using the official setup script [1]
-          iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/KDE/craft/master/setup/install_craft.ps1'))
+          Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+          Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/KDE/craft/master/setup/install_craft.ps1' -OutFile 'install_craft.ps1'
+          .\install_craft.ps1 -useDefaults -root C:\CraftRoot
           echo "C:\CraftRoot\bin" >> $env:GITHUB_PATH
 
       - name: Install Dependencies via Craft
