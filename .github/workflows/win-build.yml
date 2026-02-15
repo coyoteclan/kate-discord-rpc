@@ -1,0 +1,54 @@
+name: Windows Compilation
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          # Ensure discord-rpc submodule is included
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install KDE Craft
+        shell: powershell
+        run: |
+          # Download and install Craft using the official setup script [1]
+          iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/KDE/craft/master/setup/install_craft.ps1'))
+          echo "C:\CraftRoot\bin" >> $env:GITHUB_PATH
+
+      - name: Install Dependencies via Craft
+        shell: powershell
+        run: |
+          # Initialize the Craft environment [2]
+          & C:\CraftRoot\craft\craftenv.ps1
+          # Install KTextEditor and its transitive KF6/Qt6 dependencies
+          craft --install-deps kf6-ktexteditor
+
+      - name: Configure and Build
+        shell: powershell
+        run: |
+          & C:\CraftRoot\craft\craftenv.ps1
+          # Point CMake to the Craft root to resolve KF6 and Qt6 headers 
+          cmake -B build -S. `
+            -G "Ninja" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="C:\CraftRoot"
+          
+          cmake --build build --config Release --parallel [4, 5]
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: katediscordrpc-windows-dll
+          path: build/katediscordrpcplugin.dll
